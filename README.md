@@ -3,10 +3,10 @@
 For usage with the [smart-leds](https://github.com/smart-leds-rs/smart-leds)
 crate.
 
-If your timer/micro is to slow (e.g. all/some leds are white or display the
+If your timer/micro is too slow (e.g. all/some leds are white or display the
 wrong color), you may wish to enable the `slow` feature. It will remove any
-delay for the high part of the zero bits. This may be too short for some led 
-strips, which may display wrong data. In that case, you might want to clock 
+delay for the high part of the zero bits. This may be too short for some led
+strips, which may display wrong data. In that case, you might want to clock
 higher or use another driver.
 
 ## License
