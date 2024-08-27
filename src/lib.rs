@@ -37,6 +37,7 @@ where
 
     /// Write a single color for ws2812 devices
     #[cfg(feature = "slow")]
+    #[inline]
     fn write_byte(&mut self, mut data: u8) {
         for _ in 0..8 {
             if (data & 0x80) != 0 {
@@ -58,19 +59,24 @@ where
 
     /// Write a single color for ws2812 devices
     #[cfg(not(feature = "slow"))]
+    #[inline]
     fn write_byte(&mut self, mut data: u8) {
         for _ in 0..8 {
+            // Timer period is 333 nanoseconds.  Need TH+TL = 650-1850
+            // nanoseconds.  Unknown how long GPIO changes take.
             if (data & 0x80) != 0 {
                 block!(self.timer.wait()).ok();
-                self.pin.set_high().ok();
+                self.pin.set_high().ok(); // T1H = 550-850 nanoseconds
                 block!(self.timer.wait()).ok();
                 block!(self.timer.wait()).ok();
-                self.pin.set_low().ok();
+                self.pin.set_low().ok(); // T1L = 450-750 nanoseconds
+                block!(self.timer.wait()).ok();
             } else {
                 block!(self.timer.wait()).ok();
-                self.pin.set_high().ok();
+                self.pin.set_high().ok(); // T0H = 200 - 500 nanoseconds
                 block!(self.timer.wait()).ok();
-                self.pin.set_low().ok();
+                self.pin.set_low().ok(); // T0L = 650 - 950 nanoseconds
+                block!(self.timer.wait()).ok();
                 block!(self.timer.wait()).ok();
             }
             data <<= 1;
@@ -93,12 +99,16 @@ where
     {
         for item in iterator {
             let item = item.into();
+            // We don't know how long until the timer will expire, so wait for
+            // the end of a period to get consistent timing of first bit.
+            block!(self.timer.wait()).ok();
             self.write_byte(item.g);
             self.write_byte(item.r);
             self.write_byte(item.b);
         }
-        // Get a timeout period of 300 ns
-        for _ in 0..900 {
+        // WS2812 datasheet wants >50us
+        // 1/(3MHz) = 333ns
+        for _ in 0..(3 * 50 + 10) {
             block!(self.timer.wait()).ok();
         }
         Ok(())
